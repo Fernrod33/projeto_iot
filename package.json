@@ -1,0 +1,10 @@
+{
+  "name": "comanda-api",
+  "version": "1.0.0",
+  "description": "API e painel que recebem o resumo das comandas fechadas pelo ESP32 e calculam o total a pagar.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "MIT"
+}

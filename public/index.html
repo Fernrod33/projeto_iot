@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel da comanda — pulseira cashless</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --texto: #e2e8f0;
+    --texto-fraco: #94a3b8;
+    --destaque: #22c55e;
+    --borda: #334155;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--texto);
+    padding: 24px 16px 64px;
+  }
+  .topo {
+    max-width: 920px;
+    margin: 0 auto 24px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+  }
+  .subtitulo {
+    color: var(--texto-fraco);
+    font-size: 0.9rem;
+    margin: 0;
+  }
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--texto-fraco);
+    margin-top: 10px;
+  }
+  .ponto {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--destaque);
+  }
+  .lista {
+    max-width: 920px;
+    margin: 0 auto;
+    display: grid;
+    gap: 14px;
+  }
+  .comanda {
+    background: var(--card);
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+  .comanda-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .uid {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 0.85rem;
+    color: var(--texto-fraco);
+  }
+  .quando {
+    font-size: 0.8rem;
+    color: var(--texto-fraco);
+  }
+  .itens {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+    font-size: 0.92rem;
+  }
+  .itens li {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    border-bottom: 1px dashed var(--borda);
+  }
+  .itens li:last-child { border-bottom: none; }
+  .total {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-top: 1px solid var(--borda);
+    padding-top: 10px;
+  }
+  .total .rotulo {
+    color: var(--texto-fraco);
+    font-size: 0.9rem;
+  }
+  .total .valor {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--destaque);
+  }
+  .vazio {
+    text-align: center;
+    color: var(--texto-fraco);
+    padding: 60px 20px;
+  }
+</style>
+</head>
+<body>
+  <div class="topo">
+    <h1>Comandas fechadas</h1>
+    <p class="subtitulo">Resumo recebido do terminal (ESP32 + RC522) a cada pulseira fechada.</p>
+    <div class="status"><span class="ponto" id="statusPonto"></span><span id="statusTexto">atualizando…</span></div>
+  </div>
+  <div class="lista" id="lista">
+    <div class="vazio">Nenhuma comanda recebida ainda.</div>
+  </div>
+
+<script>
+function formatarMoeda(valor) {
+  return 'R$ ' + Number(valor).toFixed(2).replace('.', ',');
+}
+
+function formatarQuando(isoString) {
+  const data = new Date(isoString);
+  return data.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'medium' });
+}
+
+function renderizar(comandas) {
+  const lista = document.getElementById('lista');
+  if (!comandas.length) {
+    lista.innerHTML = '<div class="vazio">Nenhuma comanda recebida ainda.</div>';
+    return;
+  }
+
+  lista.innerHTML = comandas.map((c) => `
+    <div class="comanda">
+      <div class="comanda-topo">
+        <span class="uid">Tag ${c.tag_uid}</span>
+        <span class="quando">${formatarQuando(c.recebido_em)}</span>
+      </div>
+      <ul class="itens">
+        ${c.itens.map((i) => `<li><span>${i.item}</span><span>${formatarMoeda(i.valor)}</span></li>`).join('')}
+      </ul>
+      <div class="total">
+        <span class="rotulo">Total a pagar</span>
+        <span class="valor">${formatarMoeda(c.total)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function atualizar() {
+  const statusTexto = document.getElementById('statusTexto');
+  try {
+    const resposta = await fetch('/api/comandas');
+    const comandas = await resposta.json();
+    renderizar(comandas);
+    statusTexto.textContent = 'atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+  } catch (erro) {
+    statusTexto.textContent = 'sem conexão com a API';
+  }
+}
+
+atualizar();
+setInterval(atualizar, 4000); // repete a cada 4s - simples e suficiente para o painel de um evento
+</script>
+</body>
+</html>
